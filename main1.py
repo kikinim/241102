@@ -22,7 +22,7 @@ class CalculationRequest(BaseModel):
     a: float  # Target pressure
     b: float  # Target flowrate
     pump: str  # Pump model
-    conductance: List[dict]  # Conductance 리스트 (JSON 형태)
+    conductance: list[dict]  # Conductance 리스트 (JSON 형태)
 
 
 
