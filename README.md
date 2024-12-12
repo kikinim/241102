@@ -84,3 +84,8 @@ Node.js 설치 경로 확인: Node.js를 설치한 후에도 환경변수 경로
 Windows: 환경변수 설정에서 Node.js 설치 경로를 추가.
 macOS/Linux: 터미널에서 설치 경로를 확인.
 Node.js 재설치: Node.js 공식 사이트에서 Node.js를 다시 설치하면 npm도 함께 설치됩니다.
+
+
+241212
+
+conductance total 까지는 뽑아냈다
