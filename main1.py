@@ -54,13 +54,26 @@ async def calculate(data: CalculationRequest):
         
         
         wb = xw.Book("backend/data/pumpdb.xlsx")
-        sheet = wb.sheets['표준배관_직관_설비배관X Conductance']
+        #sheet = wb.sheets['표준배관_직관_설비배관X Conductance']
+
+        pump=data.pump
         sheet1 = wb.sheets['pumpdb']
+        data2 = sheet1.range('A1').expand('table').value
+        df1 = pd.DataFrame(data2[1:], columns=data2[0])
+        df1 = df1.set_index(df1.columns[0]).fillna(0)   
+        pump_index = np.round(df1.index.to_numpy(), 2)  
+        pump_values = df1[pump].to_numpy(dtype=np.float64)
+
+        print(df1)
+        print(pump_index)
+        print(pump_values)
+        #print(pump_values)
+
+
 
         conductance_list = [{"type": item.type, "description": item.description} for item in data.conductance]
         
         print(conductance_list)
-
         print(type(conductance_list))
         print(type(conductance_list[0]))
         print(conductance_list[0])
@@ -83,8 +96,20 @@ async def calculate(data: CalculationRequest):
         
         equation = Eq(1/x, sum([1/i  for i in pipe_conductance]))
         solution = solve(equation,x)
-
+        total_conductance = solution
         print("total_conductance" , solution)
+
+        total_conductance_list = pump_index *  total_conductance
+
+        print("total_conductance_list = " , total_conductance_list)
+
+        #그럼 이제 pressure index있고 pumping speed 있고 total conductance 있음
+
+
+
+        delivered_speed = (pump_values*total_conductance)/(pump_values+total_conductance)
+        delivered_throughput =  delivered_speed * pump_index / 760
+        print("delivered throughput = " , delivered_throughput)
 
         return {
         "status": "success",
