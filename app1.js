@@ -302,13 +302,13 @@ function App() {
     <h3 style={{ color: "#666", marginBottom: "10px" }}>결과</h3>
     <ul style={{ paddingLeft: "20px", color: "#555" }}>
       <li>
-        <strong>Pressure (a):</strong> {result.received_data.a}
+        <strong>Pressure (a):</strong> 
       </li>
       <li>
-        <strong>Flowrate (b):</strong> {result.received_data.b}
+        <strong>Flowrate (b):</strong> 
       </li>
       <li>
-        <strong>Pump Model:</strong> {result.received_data.pump}
+        <strong>Pump Model:</strong> 
       </li>
     </ul>
   </div>
