@@ -41,6 +41,15 @@ function App() {
     setDiameter("");
   };
 
+  const payload = {
+    a: parseFloat(a), // 숫자
+    b: parseFloat(b), // 숫자
+    pump: d,
+    conductance: conductanceList,          // 문자열
+      };
+
+
+
   // 데이터 전송 핸들러
   const handleCalculate = async () => {
     try {
@@ -57,9 +66,20 @@ function App() {
         }),
       });
 
+      // log 확인 
+      console.log(a) ;console.log("61줄까지는돼"); 
+
+      
+      console.log("전송 데이터:", payload); // 디버깅용 로그
+
+
       if (response.ok) {
         const data = await response.json();
         setResult(data); // 결과 저장
+        // test
+        console.log("Received Result:", result);
+        console.log("Received Result a :", result.a);
+
       } else {
         console.error("서버 오류:", response.statusText);
       }
@@ -267,53 +287,35 @@ function App() {
         >
           계산
         </button>
-      </div>
-
-      {/* 결과 및 그래프 */}
-      {result && Array.isArray(result) && result.length > 0 && (
-        <div
-          style={{
-            backgroundColor: "#fff",
-            padding: "15px",
-            borderRadius: "10px",
-            marginBottom: "20px",
-          }}
-        >
-          <h3 style={{ color: "#666", marginBottom: "10px" }}>결과 그래프</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={result}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="Pressure"
-                scale="log"
-                label={{
-                  value: "Pressure (torr)",
-                  position: "insideBottom",
-                }}
-              />
-              <YAxis
-                scale="linear"
-                label={{ value: "Throughput (slm)", angle: -90 }}
-              />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="delivered throughput"
-                stroke="#82ca9d"
-              />
-              <ReferenceDot
-                x={Number(a)}
-                y={Number(b)}
-                r={8}
-                fill="#3232FF"
-                label={{ value: `(${a}, ${b})`, position: "top" }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
         </div>
-      )}
-    </div>
+
+{/* 결과 표시 */}
+{result && (
+  <div
+    style={{
+      backgroundColor: "#fff",
+      padding: "15px",
+      borderRadius: "10px",
+      marginBottom: "20px",
+    }}
+  >
+    <h3 style={{ color: "#666", marginBottom: "10px" }}>결과</h3>
+    <ul style={{ paddingLeft: "20px", color: "#555" }}>
+      <li>
+        <strong>Pressure (a):</strong> {result.received_data.a}
+      </li>
+      <li>
+        <strong>Flowrate (b):</strong> {result.received_data.b}
+      </li>
+      <li>
+        <strong>Pump Model:</strong> {result.received_data.pump}
+      </li>
+    </ul>
+  </div>
+)}
+</div>
+
+
   );
 }
 
