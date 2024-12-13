@@ -17,7 +17,7 @@ function App() {
   const [a, setA] = useState(""); // Target pressure
   const [b, setB] = useState(""); // Target flowrate
   const [d, setD] = useState(""); // Pump model
-  const [result, setResult] = useState([]); // 결과 데이터
+  const [result, setResult] = useState([{x: 0.1, y:10},{x:0.2, y:20}]); // 결과 데이터
   const [type, setType] = useState(""); // 종류
   const [length, setLength] = useState(""); // 길이
   const [diameter, setDiameter] = useState(""); // 직경
@@ -289,33 +289,44 @@ function App() {
         </div>
 
 
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={result}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="x"
-              label={{ value: "Pressure (torr)", position: "insideBottom" }}
-            />
-            <YAxis
-              label={{
-                value: "Throughput (slm)",
-                angle: -90,
-                position: "insideLeft",
-              }}
-            />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="y" stroke="#82ca9d" />
-            <ReferenceDot
-              x={Number(a)}
-              y={Number(b)}
-              r={8}
-              fill="#3232FF"
-              label={{ value: `(${a}, ${b})`, position: "top" }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-  
+        {result && Array.isArray(result) && result.length > 0 ? (
+          
+        
+
+
+  <ResponsiveContainer width="100%" height={300}>
+    <LineChart data={result}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis
+        dataKey="x"
+        label={{
+          value: "X-axis",
+          position: "insideBottom",
+          offset: -5,
+        }}
+      />
+      <YAxis
+        label={{
+          value: "Y-axis",
+          angle: -90,
+          position: "insideLeft",
+        }}
+      />
+      <Tooltip />
+      <Legend />
+      <Line
+        type="monotone"
+        dataKey="y"
+        stroke="#82ca9d"
+        strokeWidth={2} // 선 두께 설정
+      />
+    </LineChart>
+  </ResponsiveContainer>
+) : (
+  <p style={{ textAlign: "center", color: "#666" }}>
+    데이터를 로드할 수 없습니다. 다시 시도하세요.
+  </p>
+)}
 
 </div>
 
