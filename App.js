@@ -67,8 +67,39 @@ function App() {
         backgroundColor: "rgba(75, 192, 192, 0.2)",
         borderWidth: isZoomed ? 2 : 0.5, // 줌 상태에 따라 선 굵기 변경
         pointRadius: isZoomed ? 3 : 0.5, // 줌 상태에 따라 점 크기 변경
+        pointBackgroundColor: "rgba(255, 99, 132, 1)", // 점 채우기 색상
+        pointBorderColor: "rgba(255, 159, 64, 1)", // 점 테두리 색상
+        pointHoverRadius: 6, // 마우스 올릴 때 점 크기
+
       },
     ],
+  };
+  const options = {
+    responsive: true,
+    scales: {
+      x: {
+        type: xLogScale ? "logarithmic" : "linear",
+        title: {
+          display: true,
+          text: "X-axis",
+        },
+      },
+      y: {
+        type: yLogScale ? "logarithmic" : "linear",
+        title: {
+          display: true,
+          text: "Y-axis",
+        },
+      },
+    },
+    plugins: {
+      legend: {
+        display: true,
+      },
+      tooltip: {
+        enabled: true,
+      },
+    },
   };
 
    // 드래그 시작
@@ -206,12 +237,13 @@ function App() {
     <div
       style={{
         fontFamily: "Arial, sans-serif",
-        maxWidth: "450px",
+        maxWidth: "950px",
         margin: "0 auto",
-        padding: "20px",
+        padding: "100px",
         backgroundColor: "#f5f5f5",
         borderRadius: "15px",
         boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+        //overflow: "hidden", // 음영 바깥으로 삐져나오는 그래프 방지
       }}
     >
       <h1
@@ -432,12 +464,13 @@ function App() {
           bottom: "10px",
           right: "10px",
           display: "flex",
+          justifyContent: "space-between",
           flexDirection: "column",
           gap: "10px",
         }}
       >
         <button
-          onClick={() => setXLogScale((prev) => !prev)}
+          onClick={() => setXLogScale(!xLogScale)}
           style={{
             padding: "10px 20px",
             borderRadius: "10px",
@@ -451,7 +484,7 @@ function App() {
           {xLogScale ? "X: Linear" : "X: Log"}
         </button>
         <button
-          onClick={() => setYLogScale((prev) => !prev)}
+          onClick={() => setYLogScale(!yLogScale)}
           style={{
             padding: "10px 20px",
             borderRadius: "10px",
