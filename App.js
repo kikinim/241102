@@ -1,16 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { Line } from "react-chartjs-2";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  ReferenceDot,
-} from "recharts";
+} from "chart.js";
+
 import "./App.css";
+
+
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+
 
 
 function App() {
@@ -22,6 +37,90 @@ function App() {
   const [length, setLength] = useState(""); // 길이
   const [diameter, setDiameter] = useState(""); // 직경
   const [conductanceList, setConductanceList] = useState([]); // Conductance 리스트
+
+  const initialState = { startX: 0, endX: 1000 }; // 초기 확대 범위
+  const [range, setRange] = useState(initialState); // 확대 범위 상태
+  const [isDragging, setIsDragging] = useState(false);
+  const [box, setBox] = useState(null); // 드래그 박스
+  const [xLogScale, setXLogScale] = useState(false); // x축 로그 스케일 상태
+  const [yLogScale, setYLogScale] = useState(false); // y축 로그 스케일 상태
+  const chartRef = useRef(null);
+  const [isZoomed, setIsZoomed] = useState(false); // 줌 상태 추적
+
+
+  const handleZoom = () => {
+    setIsZoomed(true); // 줌 상태로 설정
+  };
+
+  const handleResetZoom = () => {
+    setIsZoomed(false); // 줌 상태 해제
+  };
+  
+  // 전체 데이터
+  const data = {
+    labels: result.map((point) => point.x), // result의 x 값을 labels로 사용
+    datasets: [
+      {
+        label: "Simulation Data", // 데이터 세트의 라벨
+        data: result.map((point) => point.y), // result의 y 값을 data로 사용
+        borderColor: "rgba(75, 192, 192, 1)",
+        backgroundColor: "rgba(75, 192, 192, 0.2)",
+        borderWidth: isZoomed ? 2 : 0.5, // 줌 상태에 따라 선 굵기 변경
+        pointRadius: isZoomed ? 3 : 0.5, // 줌 상태에 따라 점 크기 변경
+      },
+    ],
+  };
+
+   // 드래그 시작
+  const handleMouseDown = (e) => {
+    const rect = e.target.getBoundingClientRect();
+    setIsDragging(true);
+    setBox({ x1: e.clientX - rect.left, y1: e.clientY - rect.top, x2: null, y2: null });
+  };
+   // 드래그 중
+   const handleMouseMove = (e) => {
+    if (!isDragging || !box) return;
+    const rect = e.target.getBoundingClientRect();
+    setBox((prev) => ({
+      ...prev,
+      x2: e.clientX - rect.left,
+      y2: e.clientY - rect.top,
+    }));
+  };
+
+  // 드래그 끝
+  const handleMouseUp = () => {
+    if (box && box.x1 !== null && box.x2 !== null) {
+      const startX = Math.min(box.x1, box.x2);
+      const endX = Math.max(box.x1, box.x2);
+
+      // x 좌표를 기준으로 범위 계산
+      const chartInstance = chartRef.current;
+      const totalWidth = chartInstance.chartArea.right - chartInstance.chartArea.left;
+      const minX = Math.round((startX / totalWidth) * 100);
+      const maxX = Math.round((endX / totalWidth) * 100);
+
+      setRange({ startX: minX, endX: maxX }); // 확대 범위 설정
+    }
+    setIsDragging(false);
+    setBox(null); // 박스 초기화
+  };
+   // 초기화
+   const handleReset = () => {
+    setRange(initialState); // 범위 초기화
+    setXLogScale(false); // x축 로그 스케일 초기화
+    setYLogScale(false); // y축 로그 스케일 초기화
+  };
+
+  // 확대된 데이터
+  const zoomedData = {
+    ...data,
+    labels: data.labels.slice(range.startX, range.endX + 1),
+    datasets: data.datasets.map((dataset) => ({
+      ...dataset,
+      data: dataset.data.slice(range.startX, range.endX + 1),
+    })),
+  };
 
   // Conductance 추가 핸들러
   const handleAddConductance = () => {
@@ -65,6 +164,7 @@ function App() {
           conductance: conductanceList,
         }),
       });
+      
 
       // log 확인 
       console.log(a) ;console.log("61줄까지는돼"); 
@@ -78,7 +178,21 @@ function App() {
         console.log("받은 데이터:", result); // 응답 로그 확인
         setResult(result); // 결과 저장
         // test
-        console.log("Received Result:")
+        console.log("Received Result:",result)
+        console.log(Array.isArray(result)); // true라면 배열
+        console.log("데이터 길이:", result.length); // 데이터 길이 확인
+        console.log("type",type.result)
+        
+
+        console.log("Dragging box coordinates:", box);
+        console.log("Zoomed Data:", zoomedData);
+        console.log(chartRef.current)
+        console.log("Zoomed range:", range);
+        console.log("Zoomed Data (after update):", zoomedData);
+
+
+
+
       } else {
         console.error("서버 오류:", response.statusText);
       }
@@ -87,6 +201,7 @@ function App() {
     }
   };
 
+    
   return (
     <div
       style={{
@@ -287,46 +402,86 @@ function App() {
           계산
         </button>
         </div>
-
-
-        {result && Array.isArray(result) && result.length > 0 ? (
-          
-        
-
-
-  <ResponsiveContainer width="100%" height={300}>
-    <LineChart data={result}>
-      <CartesianGrid strokeDasharray="3 3" />
-      <XAxis
-        dataKey="x"
-        label={{
-          value: "X-axis",
-          position: "insideBottom",
-          offset: -5,
+    
+          <div
+          style={{ position: "relative", width: "600px", height: "400px", margin: "0 auto" }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+        >
+          <Line data={zoomedData} ref={chartRef} options={{ responsive: true }} />
+          {isDragging && box && (
+            <div
+              style={{
+                position: "absolute",
+                top: box.y1,
+                left: box.x1,
+                width: Math.abs(box.x2 - box.x1),
+                height: Math.abs(box.y2 - box.y1),
+                border: "1px dashed rgba(0, 0, 0, 0.5)",
+                backgroundColor: "rgba(0, 0, 0, 0.2)",
+                pointerEvents: "none",
+              }}
+            />
+          )}
+        </div>
+        {/* 버튼 */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "10px",
+          right: "10px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
         }}
-      />
-      <YAxis
-        label={{
-          value: "Y-axis",
-          angle: -90,
-          position: "insideLeft",
-        }}
-      />
-      <Tooltip />
-      <Legend />
-      <Line
-        type="monotone"
-        dataKey="y"
-        stroke="#82ca9d"
-        strokeWidth={2} // 선 두께 설정
-      />
-    </LineChart>
-  </ResponsiveContainer>
-) : (
-  <p style={{ textAlign: "center", color: "#666" }}>
-    데이터를 로드할 수 없습니다. 다시 시도하세요.
-  </p>
-)}
+      >
+        <button
+          onClick={() => setXLogScale((prev) => !prev)}
+          style={{
+            padding: "10px 20px",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: "#f5f5f7",
+            color: "#333",
+            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+            cursor: "pointer",
+          }}
+        >
+          {xLogScale ? "X: Linear" : "X: Log"}
+        </button>
+        <button
+          onClick={() => setYLogScale((prev) => !prev)}
+          style={{
+            padding: "10px 20px",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: "#f5f5f7",
+            color: "#333",
+            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+            cursor: "pointer",
+          }}
+        >
+          {yLogScale ? "Y: Linear" : "Y: Log"}
+        </button>
+        <button
+          onClick={handleReset}
+          style={{
+            padding: "10px 20px",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: "#007aff",
+            color: "white",
+            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.2)",
+            cursor: "pointer",
+          }}
+        >
+          Reset
+        </button>
+      </div>
+
+  
+
 
 </div>
 
