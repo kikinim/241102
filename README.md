@@ -89,3 +89,7 @@ Node.js 재설치: Node.js 공식 사이트에서 Node.js를 다시 설치하면
 241212
 
 conductance total 까지는 뽑아냈다
+
+
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
