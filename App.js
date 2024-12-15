@@ -4,6 +4,7 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  LogarithmicScale,
   PointElement,
   LineElement,
   Title,
@@ -18,6 +19,7 @@ import "./App.css";
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  LogarithmicScale,
   PointElement,
   LineElement,
   Title,
@@ -46,7 +48,7 @@ function App() {
   const [yLogScale, setYLogScale] = useState(false); // y축 로그 스케일 상태
   const chartRef = useRef(null);
   const [isZoomed, setIsZoomed] = useState(false); // 줌 상태 추적
-
+  
 
   const handleZoom = () => {
     setIsZoomed(true); // 줌 상태로 설정
@@ -55,6 +57,8 @@ function App() {
   const handleResetZoom = () => {
     setIsZoomed(false); // 줌 상태 해제
   };
+  
+
   
   // 전체 데이터
   const data = {
@@ -183,7 +187,7 @@ function App() {
   // 데이터 전송 핸들러
   const handleCalculate = async () => {
     try {
-      const response = await fetch("http://12.54.70.125:8000/calculate", {
+      const response = await fetch("http://192.168.219.48:8000/calculate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -481,7 +485,7 @@ function App() {
             cursor: "pointer",
           }}
         >
-          {xLogScale ? "X: Linear" : "X: Log"}
+          X: {xLogScale ? "Linear" : "Log"}
         </button>
         <button
           onClick={() => setYLogScale(!yLogScale)}
@@ -495,7 +499,7 @@ function App() {
             cursor: "pointer",
           }}
         >
-          {yLogScale ? "Y: Linear" : "Y: Log"}
+          Y: {yLogScale ? "Linear" : "Log"}
         </button>
         <button
           onClick={handleReset}
