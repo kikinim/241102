@@ -19,10 +19,11 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 모든 출처 허용 (개발용)
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # 모든 HTTP 메서드 허용
+    allow_headers=["*"],  # 모든 헤더 허용
+    allow_credentials=True,  # 자격 증명 허용 (쿠키, 인증 등)
 )
+
 
 # 데이터 모델 정의
 
@@ -94,7 +95,7 @@ async def calculate(data: CalculationRequest):
         x=symbols('x')
         
         equation = Eq(1/x, sum([1/i  for i in pipe_conductance]))
-        solution = solve(equation,x)l
+        solution = solve(equation,x)
         total_conductance = solution
         print("total_conductance" , solution)
 
