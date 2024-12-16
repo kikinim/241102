@@ -4,12 +4,12 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  LogarithmicScale,
   PointElement,
   LineElement,
   Title,
   Tooltip,
   Legend,
+  LogarithmicScale ,
 } from "chart.js";
 
 import "./App.css";
@@ -48,7 +48,7 @@ function App() {
   const [yLogScale, setYLogScale] = useState(false); // y축 로그 스케일 상태
   const chartRef = useRef(null);
   const [isZoomed, setIsZoomed] = useState(false); // 줌 상태 추적
-  
+
 
   const handleZoom = () => {
     setIsZoomed(true); // 줌 상태로 설정
@@ -57,8 +57,6 @@ function App() {
   const handleResetZoom = () => {
     setIsZoomed(false); // 줌 상태 해제
   };
-  
-
   
   // 전체 데이터
   const data = {
@@ -124,36 +122,50 @@ function App() {
   };
 
   // 드래그 끝
-  const handleMouseUp = () => {
-    if (box && box.x1 !== null && box.x2 !== null) {
-      const startX = Math.min(box.x1, box.x2);
-      const endX = Math.max(box.x1, box.x2);
+const handleMouseUp = () => {
+  if (box && box.x1 !== null && box.x2 !== null) {
+    const chartInstance = chartRef.current.chartInstance || chartRef.current;
 
-      // x 좌표를 기준으로 범위 계산
-      const chartInstance = chartRef.current;
-      const totalWidth = chartInstance.chartArea.right - chartInstance.chartArea.left;
-      const minX = Math.round((startX / totalWidth) * 100);
-      const maxX = Math.round((endX / totalWidth) * 100);
+    // Chart.js의 그래프 영역 가져오기
+    const chartArea = chartInstance.chartArea;
+    const totalWidth = chartArea.right - chartArea.left;
 
-      setRange({ startX: minX, endX: maxX }); // 확대 범위 설정
-    }
-    setIsDragging(false);
-    setBox(null); // 박스 초기화
-  };
-   // 초기화
-   const handleReset = () => {
-    setRange(initialState); // 범위 초기화
-    setXLogScale(false); // x축 로그 스케일 초기화
-    setYLogScale(false); // y축 로그 스케일 초기화
-  };
+    // X축 범위 계산 (비율 기반)
+    const startX = Math.min(box.x1, box.x2) - chartArea.left;
+    const endX = Math.max(box.x1, box.x2) - chartArea.left;
+
+    // 유효한 범위 계산
+    const normalizedStartX = Math.max(0, Math.round((startX / totalWidth) * data.labels.length));
+    const normalizedEndX = Math.min(
+      data.labels.length - 1,
+      Math.round((endX / totalWidth) * data.labels.length)
+    );
+
+    // 확대 범위 설정
+    setRange({ startX: normalizedStartX, endX: normalizedEndX });
+  }
+  setIsDragging(false);
+  setBox(null);
+};
+
+const handleReset = () => {
+  setRange({ startX: 0, endX: data.labels.length - 1 });
+};
+
 
   // 확대된 데이터
   const zoomedData = {
     ...data,
-    labels: data.labels.slice(range.startX, range.endX + 1),
+    labels:
+      range.startX >= 0 && range.endX < data.labels.length
+        ? data.labels.slice(range.startX, range.endX + 1)
+        : data.labels, // 범위가 잘못되면 전체 데이터를 사용
     datasets: data.datasets.map((dataset) => ({
       ...dataset,
-      data: dataset.data.slice(range.startX, range.endX + 1),
+      data:
+        range.startX >= 0 && range.endX < dataset.data.length
+          ? dataset.data.slice(range.startX, range.endX + 1)
+          : dataset.data, // 범위가 잘못되면 전체 데이터를 사용
     })),
   };
 
@@ -163,6 +175,8 @@ function App() {
       alert("종류, 길이, 직경을 모두 입력하세요.");
       return;
     }
+
+
 
     const newConductance = {
       type,
@@ -187,7 +201,7 @@ function App() {
   // 데이터 전송 핸들러
   const handleCalculate = async () => {
     try {
-      const response = await fetch("http://192.168.219.48:8000/calculate", {
+      const response = await fetch("http://12.54.70.125:8000/calculate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -236,7 +250,9 @@ function App() {
     }
   };
 
-    
+      // 버튼 클릭 핸들러
+const toggleXLogScale = () => setXLogScale((prev) => !prev);
+const toggleYLogScale = () => setYLogScale((prev) => !prev);
   return (
     <div
       style={{
@@ -445,7 +461,14 @@ function App() {
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
         >
-          <Line data={zoomedData} ref={chartRef} options={{ responsive: true }} />
+          <div style={{ position: "relative", width: "600px", height: "400px", margin: "0 auto" }}>
+  <Line data={zoomedData} ref={chartRef} options={options} />
+</div>
+
+          
+          
+          
+          
           {isDragging && box && (
             <div
               style={{
@@ -473,22 +496,19 @@ function App() {
           gap: "10px",
         }}
       >
-        <button
-          onClick={() => setXLogScale(!xLogScale)}
+         <button
+          onClick={toggleXLogScale}
           style={{
             padding: "10px 20px",
-            borderRadius: "10px",
-            border: "none",
-            backgroundColor: "#f5f5f7",
-            color: "#333",
-            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
             cursor: "pointer",
           }}
         >
-          X: {xLogScale ? "Linear" : "Log"}
+          Toggle X-Axis: {xLogScale ? "Linear" : "Log"}
         </button>
         <button
-          onClick={() => setYLogScale(!yLogScale)}
+          onClick={toggleYLogScale}
           style={{
             padding: "10px 20px",
             borderRadius: "10px",
@@ -499,7 +519,7 @@ function App() {
             cursor: "pointer",
           }}
         >
-          Y: {yLogScale ? "Linear" : "Log"}
+          {yLogScale ? "Y: Linear" : "Y: Log"}
         </button>
         <button
           onClick={handleReset}
