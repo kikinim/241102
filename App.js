@@ -63,11 +63,11 @@ function App() {
     labels: result.map((point) => point.x), // result의 x 값을 labels로 사용
     datasets: [
       {
-        label: "Simulation Data", // 데이터 세트의 라벨
+        label: "Throughtput", // 데이터 세트의 라벨
         data: result.map((point) => point.y), // result의 y 값을 data로 사용
-        borderColor: "rgba(75, 192, 192, 1)",
-        backgroundColor: "rgba(75, 192, 192, 0.2)",
-        borderWidth: isZoomed ? 2 : 0.5, // 줌 상태에 따라 선 굵기 변경
+        borderColor: "rgba(211, 211, 211, 10)", // 연한 회색
+        backgroundColor: "rgba(253, 245, 230, 10)",
+        borderWidth: isZoomed ? 5 : 4, // 줌 상태에 따라 선 굵기 변경
         pointRadius: isZoomed ? 3 : 0.5, // 줌 상태에 따라 점 크기 변경
         pointBackgroundColor: "rgba(255, 99, 132, 1)", // 점 채우기 색상
         pointBorderColor: "rgba(255, 159, 64, 1)", // 점 테두리 색상
@@ -83,14 +83,14 @@ function App() {
         type: xLogScale ? "logarithmic" : "linear",
         title: {
           display: true,
-          text: "X-axis",
+          text: "Presure_Torr",
         },
       },
       y: {
         type: yLogScale ? "logarithmic" : "linear",
         title: {
           display: true,
-          text: "Y-axis",
+          text: "Throughput_SLM",
         },
       },
     },
@@ -122,52 +122,69 @@ function App() {
   };
 
   // 드래그 끝
-const handleMouseUp = () => {
-  if (box && box.x1 !== null && box.x2 !== null) {
-    const chartInstance = chartRef.current.chartInstance || chartRef.current;
-
-    // Chart.js의 그래프 영역 가져오기
+  const handleMouseUp = (e) => {
+    if (!isDragging || !box) return; // 드래그가 활성화되지 않았으면 종료
+  
+    const chartInstance = chartRef.current?.chartInstance || chartRef.current;
     const chartArea = chartInstance.chartArea;
-    const totalWidth = chartArea.right - chartArea.left;
-
-    // X축 범위 계산 (비율 기반)
-    const startX = Math.min(box.x1, box.x2) - chartArea.left;
-    const endX = Math.max(box.x1, box.x2) - chartArea.left;
-
-    // 유효한 범위 계산
-    const normalizedStartX = Math.max(0, Math.round((startX / totalWidth) * data.labels.length));
-    const normalizedEndX = Math.min(
-      data.labels.length - 1,
-      Math.round((endX / totalWidth) * data.labels.length)
-    );
-
-    // 확대 범위 설정
-    setRange({ startX: normalizedStartX, endX: normalizedEndX });
-  }
-  setIsDragging(false);
-  setBox(null);
-};
-
-const handleReset = () => {
-  setRange({ startX: 0, endX: data.labels.length - 1 });
-};
-
+  
+    // 차트 영역 확인
+    const { left, right } = chartArea;
+  
+    // 드래그 박스의 시작/끝 X 좌표 계산
+    const startX = Math.min(box.x1, box.x2);
+    const endX = Math.max(box.x1, box.x2);
+  
+    // 드래그 범위가 차트 영역 내에 있는지 확인
+    if (startX < left || endX > right) {
+      setIsDragging(false);
+      setBox(null);
+      return; // 드래그 범위가 차트 영역 밖이라면 종료
+    }
+  
+    // 차트의 데이터 범위 계산 (data.labels는 x축 값 배열)
+    const dataStart = data.labels[0];
+    const dataEnd = data.labels[data.labels.length - 1];
+  
+    // 드래그 박스의 화면 좌표를 데이터 좌표로 변환
+    const newStartX =
+      ((startX - left) / (right - left)) * (dataEnd - dataStart) + dataStart;
+    const newEndX =
+      ((endX - left) / (right - left)) * (dataEnd - dataStart) + dataStart;
+  
+    // 업데이트된 확대 범위 설정
+    setRange({
+      startX: newStartX,
+      endX: newEndX,
+    });
+  
+    console.log("Calculated range:", { newStartX, newEndX }); // 확인용 로그
+    console.log("Box coordinates:", box);
+  console.log("Chart area:", chartArea);
+  console.log("Data labels:", data.labels);
+    console.log("Calculated range:", { newStartX, newEndX });
+  
+    setIsDragging(false);
+    setBox(null); // 드래그 박스 초기화
+  };
+  
+  
+  const handleReset = () => {
+    setRange(initialState); // 확대 범위를 초기값으로 리셋
+  };
+  
 
   // 확대된 데이터
   const zoomedData = {
     ...data,
-    labels:
-      range.startX >= 0 && range.endX < data.labels.length
-        ? data.labels.slice(range.startX, range.endX + 1)
-        : data.labels, // 범위가 잘못되면 전체 데이터를 사용
     datasets: data.datasets.map((dataset) => ({
       ...dataset,
-      data:
-        range.startX >= 0 && range.endX < dataset.data.length
-          ? dataset.data.slice(range.startX, range.endX + 1)
-          : dataset.data, // 범위가 잘못되면 전체 데이터를 사용
+      data: range.startX === initialState.startX && range.endX === initialState.endX
+        ? dataset.data // 초기 상태: 전체 데이터를 표시
+        : dataset.data.filter((point) => point.x >= range.startX && point.x <= range.endX), // 확대 범위 필터링
     })),
   };
+  
 
   // Conductance 추가 핸들러
   const handleAddConductance = () => {
@@ -309,7 +326,7 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
           style={{
             padding: "10px",
             marginBottom: "10px",
-            width: "100%",
+            width: "80%",
             borderRadius: "5px",
             border: "1px solid #ccc",
           }}
@@ -322,7 +339,7 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
           style={{
             padding: "10px",
             marginBottom: "10px",
-            width: "100%",
+            width: "80%",
             borderRadius: "5px",
             border: "1px solid #ccc",
           }}
@@ -399,6 +416,92 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
           <option value="ESA200W">ESA200W</option>
           <option value="ESA500W">ESA500W</option>
           <option value="IXH3050H">IXH3050H</option>
+          <option value="ESA100WN_N2">ESA100WN_N2</option>
+<option value="ESA200W">ESA200W</option>
+<option value="ESA500W">ESA500W</option>
+<option value="ESR1283XT-LT">ESR1283XT-LT</option>
+<option value="PEB200k_Pre">PEB200k_Pre</option>
+<option value="ESR201W-LT">ESR201W-LT</option>
+<option value="ESR500W-LT">ESR500W-LT</option>
+<option value="EST300WN">EST300WN</option>
+<option value="EST301WN-BME-HN">EST301WN-BME-HN</option>
+<option value="EST500WN">EST500WN</option>
+<option value="EST500WN_BM_HN">EST500WN_BM_HN</option>
+<option value="EST500WN-BBME-HN">EST500WN-BBME-HN</option>
+<option value="EST500WN-XHN">EST500WN-XHN</option>
+<option value="EST801WN-XHN">EST801WN-XHN</option>
+<option value="EST1201WN-XHN">EST1201WN-XHN</option>
+<option value="EST1204WN-X2HN">EST1204WN-X2HN</option>
+<option value="EST1684TN-X2HN">EST1684TN-X2HN</option>
+<option value="EV_S200N">EV_S200N</option>
+<option value="EV-M202N">EV-M202N</option>
+<option value="EV-M225NS-BME-HN">EV-M225NS-BME-HN</option>
+<option value="EV-M302N">EV-M302N</option>
+<option value="EV-M352NS-BE">EV-M352NS-BE</option>
+<option value="EV-M502N">EV-M502N</option>
+<option value="EV_M502N_H2">EV_M502N_H2</option>
+<option value="EV_M502N_N2">EV_M502N_N2</option>
+<option value="EV_M502NS-BE-HN">EV_M502NS-BE-HN</option>
+<option value="EV_M505SF-BME-HN-4200RPM">EV_M505SF-BME-HN-4200RPM</option>
+<option value="EV_M505SF-BME-HN-7000RPM">EV_M505SF-BME-HN-7000RPM</option>
+<option value="EV_M505SF-B3MME-HN">EV_M505SF-B3MME-HN</option>
+<option value="EV-M805SF-B3MME-HN">EV-M805SF-B3MME-HN</option>
+<option value="EV-M1205SF-B3MME-HN">EV-M1205SF-B3MME-HN</option>
+<option value="EST1684TN-X2HN">EST1684TN-X2HN</option>
+<option value="EV-M1685TSF-B6MME-HN">EV-M1685TSF-B6MME-HN</option>
+<option value="EV-S100P">EV-S100P</option>
+<option value="EV-S20">EV-S20</option>
+<option value="EPX500">EPX500</option>
+<option value="IGX100L">IGX100L</option>
+<option value="IGX600L">IGX600L</option>
+<option value="IH1000">IH1000</option>
+<option value="IH1800_H2">iH1800_H2</option>
+<option value="IH1800_N2">iH1800_N2</option>
+<option value="iH600">iH600</option>
+<option value="IXH1220H_H2">iXH1220H_H2</option>
+<option value="IXH1220H_N2">iXH1220H_N2</option>
+<option value="IXH1220HT">IXH1220HT</option>
+<option value="IXH1220HTX">iXH1220HTX</option>
+<option value="IXH1220HTXS">iXH1220HTXS</option>
+<option value="iXH1220HTXS XD+">iXH1220HTXS XD+</option>
+<option value="IXH1820">IXH1820</option>
+<option value="IXH1820H">iXH1820H</option>
+<option value="IXH1820HTX">iXH1820HTX</option>
+<option value="IXH3030T">IXH3030T</option>
+<option value="IXH3045H">IXH3045H</option>
+<option value="IXH3050H">IXH3050H</option>
+<option value="IXH3050HTX_H2">iXH3050HTX_H2</option><option value="IXH3050HTX_N2">iXH3050HTX_N2</option>
+<option value="IXH3050HTXS">IXH3050HTXS</option>
+<option value="IXH4550HT">IXH4550HT</option>
+<option value="IXH4550">iXH4550</option>
+<option value="IXH4550">IXH4550</option>
+<option value="IXH6050H">IXH6050H</option>
+<option value="IXH6050HT">IXH6050HT</option>
+<option value="IXH6050HT_N2">IXH6050HT_N2</option>
+<option value="iXH6050HTX_H2">iXH6050HTX_H2</option>
+<option value="IXH6050HTXS">IXH6050HTXS</option>
+<option value="IXH610">IXH610</option>
+<option value="IXL120">IXL120</option>
+<option value="iXL200">iXL200</option>
+<option value="IXL600">IXL600</option>
+<option value="IXL1000N">IXL1000N</option>
+<option value="IXL250Q">IXL250Q</option>
+<option value="IXL500Q">IXL500Q</option>
+<option value="IXM1200">IXM1200</option>
+<option value="IXM1200_H2">iXM1200_H2</option>
+<option value="IM1200_N2">iXM1200_N2</option>
+<option value="IXM1800XD+">IXM1800XD+</option>
+<option value="IXM3000">IXM3000</option>
+<option value="MU100X">MU100X</option>
+<option value="MU180X">MU180X</option>
+<option value="MU300X">MU300X</option>
+<option value="MU600X">MU600X</option>
+<option value="MU600X">MU600X</option>
+<option value="SDE1203">SDE1203</option>
+<option value="SDE1203TX">SDE1203TX</option>
+<option value="SDX1200">SDX1200</option>
+<option value="SDT1800">SDT1800</option>
+<option value="SDH3000">SDH3000</option>
         </select>
       </div>
 
@@ -420,7 +523,7 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
           style={{
             padding: "10px",
             marginBottom: "10px",
-            width: "100%",
+            width: "80%",
             borderRadius: "5px",
             border: "1px solid #ccc",
           }}
@@ -433,7 +536,7 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
           style={{
             padding: "10px",
             marginBottom: "10px",
-            width: "100%",
+            width: "80%",
             borderRadius: "5px",
             border: "1px solid #ccc",
           }}
@@ -462,7 +565,39 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
           onMouseUp={handleMouseUp}
         >
           <div style={{ position: "relative", width: "600px", height: "400px", margin: "0 auto" }}>
-  <Line data={zoomedData} ref={chartRef} options={options} />
+
+          <Line
+  data={{
+    labels: zoomedData.labels, // 기존 라벨 유지
+    datasets: [
+      {
+        label: "Line Data", // 선 데이터
+        data: zoomedData.datasets[0].data, // 기존 zoomedData에서 데이터 유지
+        borderColor: "rgba(0, 122, 255, 1)", // 선 색상
+        backgroundColor: "rgba(0, 122, 255, 0.3)", // 배경 색상
+        borderWidth: 1,
+        pointRadius: 1, // 점 크기
+        pointBackgroundColor: "rgba(0, 122, 255, 1)", // 점 색상
+      },
+      {
+        label: "Highlighted Point", // 특정 점
+        data: [{ x: a, y: b }], // 특정 점 좌표
+        pointBackgroundColor: "rgba(255, 99, 71, 1)", // 점 내부 색상
+        pointBorderColor: "rgba(255, 99, 71, 1)", // 점 외부 테두리 색상
+        pointRadius: 4, // 점 크기
+        showLine: false, // 선 없음
+      },
+    ],
+  }}
+  options={options} // 기존 옵션 유지
+  ref={chartRef}
+/>
+
+
+
+
+
+  
 </div>
 
           
@@ -500,12 +635,15 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
           onClick={toggleXLogScale}
           style={{
             padding: "10px 20px",
-            borderRadius: "5px",
-            border: "1px solid #ccc",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: "#f5f5f7",
+            color: "#333",
+            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
             cursor: "pointer",
           }}
         >
-          Toggle X-Axis: {xLogScale ? "Linear" : "Log"}
+          {xLogScale ? "X: Linear" : "X: Log"}
         </button>
         <button
           onClick={toggleYLogScale}
