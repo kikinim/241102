@@ -44,11 +44,14 @@ function App() {
   const [yLogScale, setYLogScale] = useState(false); // y축 로그 스케일 상태
   const chartRef = useRef(null);
 
-  
-  
+  const point = { x: a, y: b }; // 기준점
+  const marginPercent = 0.2; // 마진 비율 (20%)
 
+  const marginX = point.x * marginPercent; // x축 마진
+  const marginY = point.y * marginPercent; // y축 마진
+  console.log(marginX,marginY)
 
-
+ 
   
   // 전체 데이터
   const data = {
@@ -67,13 +70,15 @@ function App() {
 
 
       },
-      
+
+  
+
       {
-        label: 'Extra Point',
+        label: 'Target',
         data: [{x:a,y:b}], // 추가할 점의 좌표
         backgroundColor: 'red', // 점의 색상
         borderColor: 'red',
-        pointRadius: 6, // 점의 크기
+        pointRadius: 3, // 점의 크기
         pointHoverRadius: 8,
         showLine: false, // 선을 그리지 않음
       },
@@ -81,8 +86,77 @@ function App() {
 
     ],
   };
+ 
+
+const targetY = b;
+const targetX = a; 
+  
+ const findXForY = (data, targetY) => {
+  const xLabels = data.labels; // x축 값 (labels)
+  const yData = data.datasets[0].data; // y축 값
+
+  for (let i = 0; i < yData.length - 1; i++) {
+    const y1 = yData[i];
+    const y2 = yData[i + 1];
+    const x1 = xLabels[i];
+    const x2 = xLabels[i + 1];
+
+    // targetY가 y1과 y2 사이에 있는지 확인
+    if ((y1 <= targetY && targetY <= y2) || (y2 <= targetY && targetY <= y1)) {
+      // 선형 보간법 공식 적용
+      const x = x1 + ((targetY - y1) * (x2 - x1)) / (y2 - y1);
+      return x; // 근사 x값 반환
+    }
+  }
+
+  return null; // targetY가 범위 내에 없으면 null 반환
+};
+
+const findYForX = (data, targetX) => {
+  const xLabels = data.labels; // x축 값
+  const yData = data.datasets[0].data; // y축 값
+
+  for (let i = 0; i < xLabels.length - 1; i++) {
+    const x1 = xLabels[i];
+    const x2 = xLabels[i + 1];
+    const y1 = yData[i];
+    const y2 = yData[i + 1];
+
+    // targetX가 x1과 x2 사이에 있는지 확인
+    if ((x1 <= targetX && targetX <= x2) || (x2 <= targetX && targetX <= x1)) {
+      // 선형 보간법 공식 적용
+      const y = y1 + ((targetX - x1) * (y2 - y1)) / (x2 - x1);
+      return y; // 근사 y값 반환
+    }
+  }
+
+  return null; // targetX가 범위 내에 없으면 null 반환
+};
+
+
+
+  
+  // 예제 데이터
+   
+  const resultX = findXForY(data, targetY);
+  console.log(`y=${targetY}에 해당하는 x 값은 ${resultX}입니다.`);
+  const roundedx = Math.round(resultX * 100) / 100; // 둘째 자리 반올림
+  const ansxx= (a-roundedx)/(roundedx)*100; 
+  const ansx= Math.round(ansxx * 100) / 100;
+
+  const resultY = findYForX(data, targetX);
+  console.log(`x=${targetX}에 해당하는 y 값은 ${resultY}입니다.`);
+  const roundedy = Math.round(resultY * 100) / 100; // 둘째 자리 반올림
+  const ansyy= (roundedy-b)/(roundedy)*100;
+  const ansy= Math.round(ansyy * 100) / 100;
+
+
+  console.log("결과@@@@@@",resultX,resultY)
+
   const options = {
        plugins: {
+
+
       zoom: {
         pan: {
           enabled: true, // 드래그로 이동
@@ -99,6 +173,11 @@ function App() {
         },
        
       },
+
+      
+
+
+
     },
 
 
@@ -127,7 +206,8 @@ function App() {
   
   
  
-  // 확대된 데이터
+  //const margin = {(a-conditionx)/100}    
+
 
 
   // Conductance 추가 핸들러
@@ -574,7 +654,72 @@ const resetZoom = () => {
       </button>
        
       </div>
+          
+      
+      <button
+          
+          style={{
+            marginRight: "30px", 
+            padding: "10px 20px",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: "#f5f5f7",
+            color: "rgba(0, 0, 0, 1)",
+            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+            cursor: "pointer",
+          }}
+        >
+          X margin : {ansx} %
+        </button>
 
+        <button
+          style={{
+            padding: "10px 20px",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: "#f5f5f7",
+            color: "rgba(0, 0, 0, 1)",
+            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+            cursor: "pointer",
+          }}
+        >
+          Y margin : {ansy} %
+        </button>
+        
+
+{/*합불판정*/}
+       <button
+          style={{
+            margin: "30px",
+            marginRight: "30px",
+            padding: "10px 20px",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: "#f5f5f7",
+            color: "rgba(0, 0, 255, 1)",
+            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+            cursor: "pointer",
+          }}
+        >
+         {ansx > 30 ? "Pressure margin 합격" : "Pressure margin 불합격"}    
+        </button>
+      
+
+{/*합불판정*/}
+       <button
+          style={{
+            padding: "10px 20px",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: "#f5f5f7",
+            color: "rgba(0, 0, 255, 1)",
+            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+            cursor: "pointer",
+          }}
+        >
+            {ansy > 30 ? "Throughput margin 합격" : "Throughput margin 불합격"}
+        </button>
+     
 
 
 
@@ -585,6 +730,7 @@ const resetZoom = () => {
 
 
 </div>
+
 
 
   );
