@@ -10,10 +10,11 @@ import {
   Tooltip,
   Legend,
   LogarithmicScale ,
+  registerables,
 } from "chart.js";
-
+import zoomPlugin from 'chartjs-plugin-zoom';
 import "./App.css";
-
+ChartJS.register(...registerables, zoomPlugin);
 
 
 ChartJS.register(
@@ -39,45 +40,68 @@ function App() {
   const [length, setLength] = useState(""); // 길이
   const [diameter, setDiameter] = useState(""); // 직경
   const [conductanceList, setConductanceList] = useState([]); // Conductance 리스트
-
-  const initialState = { startX: 0, endX: 1000 }; // 초기 확대 범위
-  const [range, setRange] = useState(initialState); // 확대 범위 상태
-  const [isDragging, setIsDragging] = useState(false);
-  const [box, setBox] = useState(null); // 드래그 박스
   const [xLogScale, setXLogScale] = useState(false); // x축 로그 스케일 상태
   const [yLogScale, setYLogScale] = useState(false); // y축 로그 스케일 상태
   const chartRef = useRef(null);
-  const [isZoomed, setIsZoomed] = useState(false); // 줌 상태 추적
+
+  
+  
 
 
-  const handleZoom = () => {
-    setIsZoomed(true); // 줌 상태로 설정
-  };
 
-  const handleResetZoom = () => {
-    setIsZoomed(false); // 줌 상태 해제
-  };
   
   // 전체 데이터
   const data = {
-    labels: result.map((point) => point.x), // result의 x 값을 labels로 사용
+    labels: result.map((point) => point.x ), // result의 x 값을 labels로 사용
     datasets: [
       {
-        label: "Throughtput", // 데이터 세트의 라벨
+        label: "Throughtput (Slm)", // 데이터 세트의 라벨
         data: result.map((point) => point.y), // result의 y 값을 data로 사용
-        borderColor: "rgba(211, 211, 211, 10)", // 연한 회색
-        backgroundColor: "rgba(253, 245, 230, 10)",
-        borderWidth: isZoomed ? 5 : 4, // 줌 상태에 따라 선 굵기 변경
-        pointRadius: isZoomed ? 3 : 0.5, // 줌 상태에 따라 점 크기 변경
-        pointBackgroundColor: "rgba(255, 99, 132, 1)", // 점 채우기 색상
-        pointBorderColor: "rgba(255, 159, 64, 1)", // 점 테두리 색상
+        borderColor: "rgba(9, 11, 254, 10)", // 연한 회색
+        backgroundColor: "rgba(9, 11, 254, 10)",
+        borderWidth: 2, // 줌 상태에 따라 선 굵기 변경
+        pointRadius: 1, // 줌 상태에 따라 점 크기 변경
+        pointBackgroundColor: "rgba(9, 11, 254, 10)", // 점 채우기 색상
+        pointBorderColor: "rgba(9, 11, 254, 10)", // 점 테두리 색상
         pointHoverRadius: 6, // 마우스 올릴 때 점 크기
 
+
       },
+      
+      {
+        label: 'Extra Point',
+        data: [{x:a,y:b}], // 추가할 점의 좌표
+        backgroundColor: 'red', // 점의 색상
+        borderColor: 'red',
+        pointRadius: 6, // 점의 크기
+        pointHoverRadius: 8,
+        showLine: false, // 선을 그리지 않음
+      },
+
+
     ],
   };
   const options = {
-    responsive: true,
+       plugins: {
+      zoom: {
+        pan: {
+          enabled: true, // 드래그로 이동
+          mode: 'x', // x축으로만 이동
+        },
+        zoom: {
+          wheel: {
+            enabled: true, // 마우스 휠 줌 활성화
+          },
+          pinch: {
+            enabled: true, // 터치 핀치 줌 활성화
+          },
+          mode: 'x', // x축 줌만 활성화
+        },
+       
+      },
+    },
+
+
     scales: {
       x: {
         type: xLogScale ? "logarithmic" : "linear",
@@ -85,6 +109,7 @@ function App() {
           display: true,
           text: "Presure_Torr",
         },
+        
       },
       y: {
         type: yLogScale ? "logarithmic" : "linear",
@@ -94,97 +119,16 @@ function App() {
         },
       },
     },
-    plugins: {
-      legend: {
-        display: true,
-      },
-      tooltip: {
-        enabled: true,
-      },
-    },
+    
+    responsive: true,
+    maintainAspectRatio: false,
   };
 
-   // 드래그 시작
-  const handleMouseDown = (e) => {
-    const rect = e.target.getBoundingClientRect();
-    setIsDragging(true);
-    setBox({ x1: e.clientX - rect.left, y1: e.clientY - rect.top, x2: null, y2: null });
-  };
-   // 드래그 중
-   const handleMouseMove = (e) => {
-    if (!isDragging || !box) return;
-    const rect = e.target.getBoundingClientRect();
-    setBox((prev) => ({
-      ...prev,
-      x2: e.clientX - rect.left,
-      y2: e.clientY - rect.top,
-    }));
-  };
-
-  // 드래그 끝
-  const handleMouseUp = (e) => {
-    if (!isDragging || !box) return; // 드래그가 활성화되지 않았으면 종료
-  
-    const chartInstance = chartRef.current?.chartInstance || chartRef.current;
-    const chartArea = chartInstance.chartArea;
-  
-    // 차트 영역 확인
-    const { left, right } = chartArea;
-  
-    // 드래그 박스의 시작/끝 X 좌표 계산
-    const startX = Math.min(box.x1, box.x2);
-    const endX = Math.max(box.x1, box.x2);
-  
-    // 드래그 범위가 차트 영역 내에 있는지 확인
-    if (startX < left || endX > right) {
-      setIsDragging(false);
-      setBox(null);
-      return; // 드래그 범위가 차트 영역 밖이라면 종료
-    }
-  
-    // 차트의 데이터 범위 계산 (data.labels는 x축 값 배열)
-    const dataStart = data.labels[0];
-    const dataEnd = data.labels[data.labels.length - 1];
-  
-    // 드래그 박스의 화면 좌표를 데이터 좌표로 변환
-    const newStartX =
-      ((startX - left) / (right - left)) * (dataEnd - dataStart) + dataStart;
-    const newEndX =
-      ((endX - left) / (right - left)) * (dataEnd - dataStart) + dataStart;
-  
-    // 업데이트된 확대 범위 설정
-    setRange({
-      startX: newStartX,
-      endX: newEndX,
-    });
-  
-    console.log("Calculated range:", { newStartX, newEndX }); // 확인용 로그
-    console.log("Box coordinates:", box);
-  console.log("Chart area:", chartArea);
-  console.log("Data labels:", data.labels);
-    console.log("Calculated range:", { newStartX, newEndX });
-  
-    setIsDragging(false);
-    setBox(null); // 드래그 박스 초기화
-  };
   
   
-  const handleReset = () => {
-    setRange(initialState); // 확대 범위를 초기값으로 리셋
-  };
-  
-
+ 
   // 확대된 데이터
-  const zoomedData = {
-    ...data,
-    datasets: data.datasets.map((dataset) => ({
-      ...dataset,
-      data: range.startX === initialState.startX && range.endX === initialState.endX
-        ? dataset.data // 초기 상태: 전체 데이터를 표시
-        : dataset.data.filter((point) => point.x >= range.startX && point.x <= range.endX), // 확대 범위 필터링
-    })),
-  };
-  
+
 
   // Conductance 추가 핸들러
   const handleAddConductance = () => {
@@ -213,6 +157,8 @@ function App() {
     conductance: conductanceList,          // 문자열
       };
 
+  // 줌 리셋 기능
+ 
 
 
   // 데이터 전송 핸들러
@@ -250,11 +196,8 @@ function App() {
         console.log("type",type.result)
         
 
-        console.log("Dragging box coordinates:", box);
-        console.log("Zoomed Data:", zoomedData);
-        console.log(chartRef.current)
-        console.log("Zoomed range:", range);
-        console.log("Zoomed Data (after update):", zoomedData);
+
+       
 
 
 
@@ -270,6 +213,14 @@ function App() {
       // 버튼 클릭 핸들러
 const toggleXLogScale = () => setXLogScale((prev) => !prev);
 const toggleYLogScale = () => setYLogScale((prev) => !prev);
+
+const resetZoom = () => {
+  if (chartRef.current) {
+    chartRef.current.resetZoom();
+  }
+};
+
+
   return (
     <div
       style={{
@@ -277,7 +228,7 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
         maxWidth: "950px",
         margin: "0 auto",
         padding: "100px",
-        backgroundColor: "#f5f5f5",
+        backgroundColor: "#ffffff",
         borderRadius: "15px",
         boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
         //overflow: "hidden", // 음영 바깥으로 삐져나오는 그래프 방지
@@ -514,7 +465,7 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
           marginBottom: "20px",
         }}
       >
-        <h3 style={{ color: "#666", marginBottom: "10px" }}>Target 입력</h3>
+        <h3 style={{ color: "#666", marginBottom: "10px" }}>공정조건 입력</h3>
         <input
           type="number"
           value={a}
@@ -558,68 +509,15 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
         </button>
         </div>
     
-          <div
-          style={{ position: "relative", width: "600px", height: "400px", margin: "0 auto" }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-        >
-          <div style={{ position: "relative", width: "600px", height: "400px", margin: "0 auto" }}>
-
-          <Line
-  data={{
-    labels: zoomedData.labels, // 기존 라벨 유지
-    datasets: [
-      {
-        label: "Line Data", // 선 데이터
-        data: zoomedData.datasets[0].data, // 기존 zoomedData에서 데이터 유지
-        borderColor: "rgba(0, 122, 255, 1)", // 선 색상
-        backgroundColor: "rgba(0, 122, 255, 0.3)", // 배경 색상
-        borderWidth: 1,
-        pointRadius: 1, // 점 크기
-        pointBackgroundColor: "rgba(0, 122, 255, 1)", // 점 색상
-      },
-      {
-        label: "Highlighted Point", // 특정 점
-        data: [{ x: a, y: b }], // 특정 점 좌표
-        pointBackgroundColor: "rgba(255, 99, 71, 1)", // 점 내부 색상
-        pointBorderColor: "rgba(255, 99, 71, 1)", // 점 외부 테두리 색상
-        pointRadius: 4, // 점 크기
-        showLine: false, // 선 없음
-      },
-    ],
-  }}
-  options={options} // 기존 옵션 유지
-  ref={chartRef}
-/>
+        <div style={{ position: 'relative', height: '500px', width: '100%' }}>
 
 
 
+      <h3>Pump Throughtput 그래프</h3>
 
-
-  
-</div>
-
-          
-          
-          
-          
-          {isDragging && box && (
-            <div
-              style={{
-                position: "absolute",
-                top: box.y1,
-                left: box.x1,
-                width: Math.abs(box.x2 - box.x1),
-                height: Math.abs(box.y2 - box.y1),
-                border: "1px dashed rgba(0, 0, 0, 0.5)",
-                backgroundColor: "rgba(0, 0, 0, 0.2)",
-                pointerEvents: "none",
-              }}
-            />
-          )}
-        </div>
-        {/* 버튼 */}
+      <Line ref={chartRef} data={data} options={options} />
+      
+      {/* 버튼 */}
       <div
         style={{
           position: "absolute",
@@ -659,22 +557,30 @@ const toggleYLogScale = () => setYLogScale((prev) => !prev);
         >
           {yLogScale ? "Y: Linear" : "Y: Log"}
         </button>
-        <button
-          onClick={handleReset}
-          style={{
+        <button onClick={resetZoom} 
+        style={{
             padding: "10px 20px",
             borderRadius: "10px",
             border: "none",
-            backgroundColor: "#007aff",
-            color: "white",
-            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.2)",
+            backgroundColor: "#f5f5f7",
+            color: "#333",
+            boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
             cursor: "pointer",
-          }}
-        >
-          Reset
-        </button>
+          }}>
+        
+        
+        
+        줌 리셋
+      </button>
+       
       </div>
 
+
+
+
+    </div>
+       
+        
   
 
 
