@@ -50,6 +50,16 @@ function App() {
   const marginX = point.x * marginPercent; // x축 마진
   const marginY = point.y * marginPercent; // y축 마진
   console.log(marginX,marginY)
+  
+// 추천 Conductance 추가 핸들러
+const handleAddRecommendedConductance = (recommendations) => {
+  // 기존 리스트에 추천 Conductance 항목 추가
+  setConductanceList([...conductanceList, ...recommendations]);
+};
+// Conductance 초기화 핸들러
+const handleResetConductance = () => {
+  setConductanceList([]); // conductanceList를 빈 배열로 설정
+};
 
  
   
@@ -70,7 +80,9 @@ function App() {
 
 
       },
+      
 
+      
   
 
       {
@@ -86,31 +98,28 @@ function App() {
 
     ],
   };
- 
+
+
+
+
 
 const targetY = b;
 const targetX = a; 
   
- const findXForY = (data, targetY) => {
-  const yLabels = data.labels; // x축 값 (labels)
-  const xData = data.datasets[0].data; // y축 값
-  console.log("WWWWWWWW",yLabels)
-  for (let i = 0; i < yLabels.length - 1; i++) {
-    console.log("LLLLLLLL",yLabels.length)
-    const y1 = yLabels[i];
-    const y2 = yLabels[i + 1];
-    const x1 = xData[i];
-    const x2 = xData[i+1];
-    console.log("X!X!X!X!",x1)
-    
+const findXForY = (data, targetY) => {
+  const xLabels = data.labels; // x축 값
+  const yData = data.datasets[0].data; // y축 값
+
+  for (let i = 0; i < yData.length - 1; i++) {
+    const y1 = yData[i]; // y축 값
+    const y2 = yData[i + 1]; // 다음 y축 값
+    const x1 = xLabels[i]; // x축 값
+    const x2 = xLabels[i + 1]; // 다음 x축 값
+
     // targetY가 y1과 y2 사이에 있는지 확인
     if ((y1 <= targetY && targetY <= y2) || (y2 <= targetY && targetY <= y1)) {
-
-      console.log("@@@@@@@@",y1,y2,targetY)
       // 선형 보간법 공식 적용
       const x = x1 + ((targetY - y1) * (x2 - x1)) / (y2 - y1);
-      console.log("######",y1,y2,x2,x1)
-      
       return x; // 근사 x값 반환
     }
   }
@@ -138,6 +147,58 @@ const findYForX = (data, targetX) => {
 
   return null; // targetX가 범위 내에 없으면 null 반환
 };
+
+
+let cumulativeSum = 0;
+
+const qwerData = result.map((point, index, arr) => {
+  // 마지막 요소는 e를 계산하지 않음
+  const e =
+    index < arr.length - 1
+      ? 100 / (point.y * point.x/760/60) * Math.log(point.x / arr[index + 1].x)
+
+      
+      : null;
+
+console.log(point.x,point.y,"eeeeeeeeeeeeee" ,e,"xxxxxxxxxxxxxxxyyyyyyyyyyyyyyyyyyyyy");
+
+  // r 누적합 계산
+  if (e !== null) cumulativeSum += e;
+
+  return {
+    q: point.x,       // x 값
+    w: point.y,       // y 값
+    e: e,             // 계산된 e 값
+    r: cumulativeSum, // 누적합 r 값
+  };
+});
+
+console.log(qwerData);
+
+
+  const qweChartData = {
+    labels: qwerData.map((item) => item.r), // r를 x축 값으로 사용
+    datasets: [
+      {
+        label: "Tact time graph", // 새로운 데이터셋
+        data: qwerData.map((item) => ({
+          x: item.r,
+          y: item.q,
+        })),
+        borderColor: "rgba(9, 11, 254, 10)", // 연한 회색
+        backgroundColor: "rgba(9, 11, 254, 10)",
+        borderWidth: 2, // 줌 상태에 따라 선 굵기 변경
+        pointRadius: 1, // 줌 상태에 따라 점 크기 변경
+        pointBackgroundColor: "rgba(9, 11, 254, 10)", // 점 채우기 색상
+        pointBorderColor: "rgba(9, 11, 254, 10)", // 점 테두리 색상
+        pointHoverRadius: 6, // 마우스 올릴 때 점 크
+
+      },
+    ],
+  };
+
+
+
 
 
 
@@ -348,7 +409,7 @@ const resetZoom = () => {
           style={{
             padding: "10px",
             marginBottom: "10px",
-            width: "100%",
+            width: "30%",
             borderRadius: "5px",
             border: "1px solid #ccc",
           }}
@@ -362,9 +423,10 @@ const resetZoom = () => {
           onChange={(e) => setLength(e.target.value)}
           placeholder="길이 (cm)"
           style={{
+            display :  "block",
             padding: "10px",
             marginBottom: "10px",
-            width: "80%",
+            width: "50%",
             borderRadius: "5px",
             border: "1px solid #ccc",
           }}
@@ -377,7 +439,7 @@ const resetZoom = () => {
           style={{
             padding: "10px",
             marginBottom: "10px",
-            width: "80%",
+            width: "50%",
             borderRadius: "5px",
             border: "1px solid #ccc",
           }}
@@ -399,6 +461,40 @@ const resetZoom = () => {
         </button>
       </div>
 
+
+      {/* 추천 */}
+      <div
+  style={{
+    backgroundColor: "#fff",
+    padding: "15px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+  }}
+>
+  <h3 style={{ color: "#666", marginBottom: "10px" }}>추천 Conductance 입력</h3>
+  <button
+    onClick={() =>
+      handleAddRecommendedConductance([
+        { type: "Recommended", description: "L=100cm, D=10cm" },
+        { type: "Recommended", description: "L=1000cm, D=20cm" },
+      ])
+    }
+    style={{
+      padding: "10px",
+      backgroundColor: "#4CAF50",
+      color: "#fff",
+      fontWeight: "bold",
+      borderRadius: "5px",
+      cursor: "pointer",
+      width: "80%",
+      border: "none",
+    }}
+  >
+    추천 Conductance / (설비배관 : L=100cm, D=10cm) + (배기 배관 : L=1000cm, D=20cm) / 추가
+  </button>
+</div>
+      
+
       {/* Conductance 리스트 */}
       <div
         style={{
@@ -418,7 +514,7 @@ const resetZoom = () => {
         >
           {conductanceList.length > 0
             ? `${conductanceList.length} Conductance series`
-            : "Conductance"}
+            : "입력한 Conductance"}
         </h3>
         <ul style={{ paddingLeft: "20px", color: "#555" }}>
           {conductanceList.map((item, index) => (
@@ -426,6 +522,34 @@ const resetZoom = () => {
           ))}
         </ul>
       </div>
+
+      {/*초기화버튼추가*/}
+<div
+  style={{
+    backgroundColor: "#fff",
+    padding: "15px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+  }}
+>
+  <h3 style={{ color: "#666", marginBottom: "10px" }}>Conductance 초기화</h3>
+  <button
+    onClick={handleResetConductance}
+    style={{
+      padding: "10px",
+      backgroundColor: "#FF6F61",
+      color: "#fff",
+      fontWeight: "bold",
+      borderRadius: "5px",
+      cursor: "pointer",
+      width: "18%",
+      border: "none",
+    }}
+  >
+    Conductance 초기화
+  </button>
+</div>
+
 
       {/* Pump 모델 */}
       <div
@@ -541,6 +665,8 @@ const resetZoom = () => {
 <option value="SDT1800">SDT1800</option>
 <option value="SDH3000">SDH3000</option>
         </select>
+
+
       </div>
 
       {/* Target Pressure and Flowrate */}
@@ -595,6 +721,8 @@ const resetZoom = () => {
           계산
         </button>
         </div>
+    
+
     
         <div style={{ position: 'relative', height: '500px', width: '100%' }}>
 
@@ -735,7 +863,12 @@ const resetZoom = () => {
 
     </div>
        
-        
+          {/* 두 번째 차트 */}
+          
+  <div style={{ position: "relative", height: "400px", width: "100%", marginTop: "200px" }}>
+    <h3>Tact Time 그래프</h3>
+    <Line data={qweChartData} options={options} />
+  </div>
   
 
 
