@@ -91,15 +91,15 @@ function App() {
 const targetY = b;
 const targetX = a; 
   
- const findXForY = (data, targetY) => {
-  const xLabels = data.labels; // x축 값 (labels)
+const findXForY = (data, targetY) => {
+  const xLabels = data.labels; // x축 값
   const yData = data.datasets[0].data; // y축 값
 
   for (let i = 0; i < yData.length - 1; i++) {
-    const y1 = yData[i];
-    const y2 = yData[i + 1];
-    const x1 = xLabels[i];
-    const x2 = xLabels[i + 1];
+    const y1 = yData[i]; // y축 값
+    const y2 = yData[i + 1]; // 다음 y축 값
+    const x1 = xLabels[i]; // x축 값
+    const x2 = xLabels[i + 1]; // 다음 x축 값
 
     // targetY가 y1과 y2 사이에 있는지 확인
     if ((y1 <= targetY && targetY <= y2) || (y2 <= targetY && targetY <= y1)) {
@@ -139,6 +139,7 @@ const findYForX = (data, targetX) => {
   // 예제 데이터
    
   const resultX = findXForY(data, targetY);
+  console.log("targety" , targetY,resultX)
   console.log(`y=${targetY}에 해당하는 x 값은 ${resultX}입니다.`);
   const roundedx = Math.round(resultX * 100) / 100; // 둘째 자리 반올림
   const ansxx= (a-roundedx)/(roundedx)*100; 
@@ -600,9 +601,10 @@ const resetZoom = () => {
       {/* 버튼 */}
       <div
         style={{
+          
           position: "absolute",
           bottom: "10px",
-          right: "10px",
+          right: "-84px",
           display: "flex",
           justifyContent: "space-between",
           flexDirection: "column",
@@ -612,6 +614,7 @@ const resetZoom = () => {
          <button
           onClick={toggleXLogScale}
           style={{
+            left: "100px", // 왼쪽에서 100px 떨어진 위치
             padding: "10px 20px",
             borderRadius: "10px",
             border: "none",
@@ -626,6 +629,7 @@ const resetZoom = () => {
         <button
           onClick={toggleYLogScale}
           style={{
+            rigt: "100px", // 왼쪽에서 100px 떨어진 위치
             padding: "10px 20px",
             borderRadius: "10px",
             border: "none",
