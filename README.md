@@ -93,3 +93,8 @@ conductance total 까지는 뽑아냈다
 
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
+=10^((LOG($C$12)-LOG($C$13))/1000*(1000-X8)+LOG($C$13))
+
+=(Y8-Y9)*$C$11/Z8*60
+
+
