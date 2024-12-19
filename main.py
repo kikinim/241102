@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 from sympy import symbols, Eq, solve
 from fastapi.responses import JSONResponse
 
+import sqlite3
+from datetime import datetime
 
 # FastAPI 인스턴스 생성
 app = FastAPI()
@@ -19,11 +21,10 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 모든 출처 허용 (개발용)
-    allow_methods=["*"],  # 모든 HTTP 메서드 허용
-    allow_headers=["*"],  # 모든 헤더 허용
-    allow_credentials=True,  # 자격 증명 허용 (쿠키, 인증 등)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-
 
 # 데이터 모델 정의
 
@@ -40,19 +41,91 @@ class CalculationRequest(BaseModel):
     pump: str
     conductance: List[ConductanceItem]  # Conductance 리스트
 
+def init_db():
+    conn = sqlite3.connect('clicks.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS clicks (count INTEGER)''')
+    cursor.execute('SELECT COUNT(*) FROM clicks')
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('INSERT INTO clicks (count) VALUES (0)')
+    conn.commit()
+    conn.close()
 
+
+# SQLite 데이터베이스 초기화
+def init_db():
+    conn = sqlite3.connect('clicks.db')
+    cursor = conn.cursor()
+    # 테이블 생성: 클릭 기록(시간과 횟수 포함)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clicks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def add_timestamp_column():
+    conn = sqlite3.connect('clicks.db')
+    cursor = conn.cursor()
+    try:
+        # 테이블에 'timestamp' 컬럼 추가
+        cursor.execute('ALTER TABLE clicks ADD COLUMN timestamp TEXT')
+        conn.commit()
+    except sqlite3.OperationalError as e:
+        print("Column 'timestamp' already exists or another issue:", e)
+    finally:
+        conn.close()
+
+
+# 클릭 저장 (횟수는 자동 증가, 시간 저장)
+def save_click():
+    conn = sqlite3.connect('clicks.db')
+    cursor = conn.cursor()
+    current_time = datetime.now().isoformat()  # ISO 형식으로 현재 시간 저장
+    cursor.execute('INSERT INTO clicks (timestamp) VALUES (?)', (current_time,))
+    conn.commit()
+    conn.close()
+# 클릭 횟수 가져오기
+def get_click_count():
+    conn = sqlite3.connect('clicks.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM clicks')  # 클릭 횟수를 계산
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+# 클릭 기록 가져오기 (시간 포함)
+def get_clicks():
+    conn = sqlite3.connect('clicks.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM clicks')  # 클릭 기록 전체 가져오기
+    clicks = cursor.fetchall()
+    conn.close()
+    return clicks
+
+
+
+# 초기화
+init_db()
+add_timestamp_column()  # 'timestamp' 컬럼 추가
 
 # 엔드포인트
 @app.post("/calculate")
 async def calculate(data: CalculationRequest):
     try:
-        print("WWWWWWWWWWWWW")
+        # 클릭 저장
+        save_click()
+
     
         print("Received Target Pressure (a):", data.a)
         print("Received Target Flowrate (b):", data.b)
         print("Received Pump Model:", data.pump)
         print("Received Conductance List:", data.conductance)
         
+
+
         
         wb = xw.Book("backend/data/pumpdb.xlsx")
         #sheet = wb.sheets['표준배관_직관_설비배관X Conductance']
@@ -115,6 +188,15 @@ async def calculate(data: CalculationRequest):
         result = [{"x": float(x), "y": float(y)} for x, y in zip(pump_index, delivered_throughput)]
 
         print("응답 데이터 : " , result)
+
+        
+        
+
+         # 클릭 횟수 및 기록 반환
+        click_count = get_click_count()  # 총 클릭 횟수
+        click_times = get_clicks()      # 클릭 시간 기록
+        print("click@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",click_count,click_times)
+
 
         return JSONResponse(content=result)
 
