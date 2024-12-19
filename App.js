@@ -436,8 +436,19 @@ const resetZoom = () => {
           fontWeight: "bold",
         }}
       >
-        PCS Pumping Simulation
+        PCS Pumping Simulation 
       </h1>
+      <h3
+        style={{
+          textAlign: "Right",
+          color: "#333",
+          fontSize: "12px",
+          fontWeight: "bold",
+        }}
+      >
+        제작 :고명국
+      </h3>
+
 
       {/* Conductance 입력 */}
       <div
