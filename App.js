@@ -50,6 +50,16 @@ function App() {
   const marginX = point.x * marginPercent; // x축 마진
   const marginY = point.y * marginPercent; // y축 마진
   console.log(marginX,marginY)
+  
+// 추천 Conductance 추가 핸들러
+const handleAddRecommendedConductance = (recommendations) => {
+  // 기존 리스트에 추천 Conductance 항목 추가
+  setConductanceList([...conductanceList, ...recommendations]);
+};
+// Conductance 초기화 핸들러
+const handleResetConductance = () => {
+  setConductanceList([]); // conductanceList를 빈 배열로 설정
+};
 
  
   
@@ -70,7 +80,9 @@ function App() {
 
 
       },
+      
 
+      
   
 
       {
@@ -86,7 +98,10 @@ function App() {
 
     ],
   };
- 
+
+
+
+
 
 const targetY = b;
 const targetX = a; 
@@ -102,14 +117,24 @@ const findXForY = (data, targetY) => {
     const x2 = xLabels[i + 1]; // 다음 x축 값
 
     // targetY가 y1과 y2 사이에 있는지 확인
-    if ((y1 <= targetY && targetY <= y2) || (y2 <= targetY && targetY <= y1)) {
+    if ((y1 <= targetY && targetY <= y2 && y1 != 0 && y2 != 0) || (y2 <= targetY && targetY <= y1 && y1 != 0 && y2 != 0)) {
       // 선형 보간법 공식 적용
       const x = x1 + ((targetY - y1) * (x2 - x1)) / (y2 - y1);
+      
+      console.log("x1,x2,y1,y2,targety,x",x1,x2,y2,y1,x,targetY);
+      
+      
       return x; // 근사 x값 반환
+
+
     }
   }
 
   return null; // targetY가 범위 내에 없으면 null 반환
+
+
+
+
 };
 
 const findYForX = (data, targetX) => {
@@ -134,6 +159,69 @@ const findYForX = (data, targetX) => {
 };
 
 
+let cumulativeSum = 0;
+
+const qwerData = result.map((point, index, arr) => {
+  let e = null;
+
+  // e 계산 (마지막 요소 제외)
+  if (index < arr.length - 1) {
+    const nextX = arr[index + 1].x;
+
+    // 로그 값이 유효한 경우에만 계산
+    if (point.y>0 && point.x > 0 && nextX > 0 && point.x / nextX > 0) {
+      e = 100 / (point.y / 60 * 760 /point.x) * Math.log(point.x / nextX);
+
+
+     
+    
+    } else {
+      e = 0; // 로그 값이 유효하지 않으면 e를 0으로 처리
+    }
+  }
+
+  // 누적합 r 계산
+  cumulativeSum += e;
+
+  return {
+    q: point.x,       // x 값
+    w: point.y,       // y 값
+    e: e,             // 계산된 e 값
+    r: cumulativeSum, // 누적합 r 값
+  };
+});
+
+console.log(qwerData);
+
+
+  const qweChartData = {
+
+    
+  
+    labels: qwerData.map((item) => item.r), // r를 x축 값으로 사용
+    datasets: [
+      {
+        label: "Tact time graph", // 새로운 데이터셋
+        data: qwerData.map((item) => ({
+          x: item.r,
+          y: item.q,
+        })),
+        borderColor: "rgba(9, 11, 254, 10)", // 연한 회색
+        backgroundColor: "rgba(9, 11, 254, 10)",
+        borderWidth: 2, // 줌 상태에 따라 선 굵기 변경
+        pointRadius: 1, // 줌 상태에 따라 점 크기 변경
+        pointBackgroundColor: "rgba(9, 11, 254, 10)", // 점 채우기 색상
+        pointBorderColor: "rgba(9, 11, 254, 10)", // 점 테두리 색상
+        pointHoverRadius: 6, // 마우스 올릴 때 점 크
+
+      },
+    ],
+  };
+
+
+
+
+
 
   
   // 예제 데이터
@@ -142,17 +230,19 @@ const findYForX = (data, targetX) => {
   console.log("targety" , targetY,resultX)
   console.log(`y=${targetY}에 해당하는 x 값은 ${resultX}입니다.`);
   const roundedx = Math.round(resultX * 100) / 100; // 둘째 자리 반올림
-  const ansxx= (a-roundedx)/(roundedx)*100; 
+  const ansxx= (targetX-roundedx)/(roundedx)*100; 
   const ansx= Math.round(ansxx * 100) / 100;
+  console.log("pressure margin 확인 :  ", ansx,targetX,roundedx )
+
 
   const resultY = findYForX(data, targetX);
   console.log(`x=${targetX}에 해당하는 y 값은 ${resultY}입니다.`);
   const roundedy = Math.round(resultY * 100) / 100; // 둘째 자리 반올림
-  const ansyy= (roundedy-b)/(roundedy)*100;
+  const ansyy= (roundedy-targetY)/(roundedy)*100;
   const ansy= Math.round(ansyy * 100) / 100;
 
 
-  console.log("결과@@@@@@",resultX,resultY)
+
 
   const options = {
        plugins: {
@@ -187,7 +277,7 @@ const findYForX = (data, targetX) => {
         type: xLogScale ? "logarithmic" : "linear",
         title: {
           display: true,
-          text: "Presure_Torr",
+          text: "Presure (Torr)",
         },
         
       },
@@ -195,7 +285,7 @@ const findYForX = (data, targetX) => {
         type: yLogScale ? "logarithmic" : "linear",
         title: {
           display: true,
-          text: "Throughput_SLM",
+          text: "Throughput (SLM)",
         },
       },
     },
@@ -205,6 +295,27 @@ const findYForX = (data, targetX) => {
   };
 
   
+  const optionsSecondChart = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        type: "linear",
+        title: {
+          display: true,
+          text: "Time (Second)", // 두 번째 그래프의 x축 레이블
+        },
+      },
+      y: {
+        type: "linear",
+        title: {
+          display: true,
+          text: "Pressure (Torr)", // 두 번째 그래프의 y축 레이블
+        },
+      },
+    },
+  };
+
   
  
   //const margin = {(a-conditionx)/100}    
@@ -260,10 +371,10 @@ const findYForX = (data, targetX) => {
       
 
       // log 확인 
-      console.log(a) ;console.log("61줄까지는돼"); 
+   
 
       
-      console.log("전송 데이터:", payload); // 디버깅용 로그
+
 
 
       if (response.ok) {
@@ -342,7 +453,7 @@ const resetZoom = () => {
           style={{
             padding: "10px",
             marginBottom: "10px",
-            width: "100%",
+            width: "30%",
             borderRadius: "5px",
             border: "1px solid #ccc",
           }}
@@ -356,9 +467,10 @@ const resetZoom = () => {
           onChange={(e) => setLength(e.target.value)}
           placeholder="길이 (cm)"
           style={{
+            display :  "block",
             padding: "10px",
             marginBottom: "10px",
-            width: "80%",
+            width: "50%",
             borderRadius: "5px",
             border: "1px solid #ccc",
           }}
@@ -371,7 +483,7 @@ const resetZoom = () => {
           style={{
             padding: "10px",
             marginBottom: "10px",
-            width: "80%",
+            width: "50%",
             borderRadius: "5px",
             border: "1px solid #ccc",
           }}
@@ -393,6 +505,40 @@ const resetZoom = () => {
         </button>
       </div>
 
+
+      {/* 추천 */}
+      <div
+  style={{
+    backgroundColor: "#fff",
+    padding: "15px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+  }}
+>
+  <h3 style={{ color: "#666", marginBottom: "10px" }}>추천 Conductance 입력</h3>
+  <button
+    onClick={() =>
+      handleAddRecommendedConductance([
+        { type: "Recommended", description: "L=100cm, D=10cm" },
+        { type: "Recommended", description: "L=1000cm, D=20cm" },
+      ])
+    }
+    style={{
+      padding: "10px",
+      backgroundColor: "#4CAF50",
+      color: "#fff",
+      fontWeight: "bold",
+      borderRadius: "5px",
+      cursor: "pointer",
+      width: "80%",
+      border: "none",
+    }}
+  >
+    추천 Conductance / (설비배관 : L=100cm, D=10cm) + (배기 배관 : L=1000cm, D=20cm) / 추가
+  </button>
+</div>
+      
+
       {/* Conductance 리스트 */}
       <div
         style={{
@@ -412,7 +558,7 @@ const resetZoom = () => {
         >
           {conductanceList.length > 0
             ? `${conductanceList.length} Conductance series`
-            : "Conductance"}
+            : "입력한 Conductance"}
         </h3>
         <ul style={{ paddingLeft: "20px", color: "#555" }}>
           {conductanceList.map((item, index) => (
@@ -420,6 +566,34 @@ const resetZoom = () => {
           ))}
         </ul>
       </div>
+
+      {/*초기화버튼추가*/}
+<div
+  style={{
+    backgroundColor: "#fff",
+    padding: "15px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+  }}
+>
+  <h3 style={{ color: "#666", marginBottom: "10px" }}>Conductance 초기화</h3>
+  <button
+    onClick={handleResetConductance}
+    style={{
+      padding: "10px",
+      backgroundColor: "#FF6F61",
+      color: "#fff",
+      fontWeight: "bold",
+      borderRadius: "5px",
+      cursor: "pointer",
+      width: "18%",
+      border: "none",
+    }}
+  >
+    Conductance 초기화
+  </button>
+</div>
+
 
       {/* Pump 모델 */}
       <div
@@ -535,6 +709,8 @@ const resetZoom = () => {
 <option value="SDT1800">SDT1800</option>
 <option value="SDH3000">SDH3000</option>
         </select>
+
+
       </div>
 
       {/* Target Pressure and Flowrate */}
@@ -589,6 +765,8 @@ const resetZoom = () => {
           계산
         </button>
         </div>
+    
+
     
         <div style={{ position: 'relative', height: '500px', width: '100%' }}>
 
@@ -673,7 +851,7 @@ const resetZoom = () => {
             cursor: "pointer",
           }}
         >
-          X margin : {ansx} %
+          Pressure margin : {ansx} %
         </button>
 
         <button
@@ -687,7 +865,7 @@ const resetZoom = () => {
             cursor: "pointer",
           }}
         >
-          Y margin : {ansy} %
+          Throughput margin : {ansy} %
         </button>
         
 
@@ -729,7 +907,16 @@ const resetZoom = () => {
 
     </div>
        
-        
+          {/* 두 번째 차트 */}
+
+
+
+          
+          
+  <div style={{ position: "relative", height: "400px", width: "100%", marginTop: "200px" }}>
+    <h3>Tact Time 그래프</h3>
+    <Line data={qweChartData} options={optionsSecondChart} />
+  </div>
   
 
 
