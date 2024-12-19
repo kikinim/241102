@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -43,6 +43,9 @@ function App() {
   const [xLogScale, setXLogScale] = useState(false); // x축 로그 스케일 상태
   const [yLogScale, setYLogScale] = useState(false); // y축 로그 스케일 상태
   const chartRef = useRef(null);
+  
+  const [V, setV] = useState(100); // 부피 V 초기값
+
 
   const point = { x: a, y: b }; // 기준점
   const marginPercent = 0.2; // 마진 비율 (20%)
@@ -161,20 +164,19 @@ const findYForX = (data, targetX) => {
 
 let cumulativeSum = 0;
 
-const qwerData = result.map((point, index, arr) => {
-  let e = null;
+const qwerData = useMemo(() => {
+  let cumulativeSum = 0;
 
+  return result.map((point, index, arr) => {
+    let e = null;
   // e 계산 (마지막 요소 제외)
   if (index < arr.length - 1) {
     const nextX = arr[index + 1].x;
 
     // 로그 값이 유효한 경우에만 계산
     if (point.y>0 && point.x > 0 && nextX > 0 && point.x / nextX > 0) {
-      e = 100 / (point.y / 60 * 760 /point.x) * Math.log(point.x / nextX);
+      e = V / (point.y / 60 * 760 /point.x) * Math.log(point.x / nextX);
 
-
-     
-    
     } else {
       e = 0; // 로그 값이 유효하지 않으면 e를 0으로 처리
     }
@@ -189,7 +191,7 @@ const qwerData = result.map((point, index, arr) => {
     e: e,             // 계산된 e 값
     r: cumulativeSum, // 누적합 r 값
   };
-});
+});  }, [V, result]); // V 값 변경 시 재계
 
 console.log(qwerData);
 
@@ -907,6 +909,11 @@ const resetZoom = () => {
 
     </div>
        
+
+    
+
+
+       
           {/* 두 번째 차트 */}
 
 
@@ -915,6 +922,58 @@ const resetZoom = () => {
           
   <div style={{ position: "relative", height: "400px", width: "100%", marginTop: "200px" }}>
     <h3>Tact Time 그래프</h3>
+
+
+    <label
+      htmlFor="volume-input"
+      style={{
+        display: "block",
+        marginBottom: "5px",
+        fontSize: "14px",
+        color: "#555",
+      }}
+    >
+      Enter the volume (V) in liters:
+    </label>
+
+
+{/* volume 넣기 */}
+
+    <input
+  type="number"
+  placeholder="Volume (L)"
+  style={{
+    width: "10%",
+    padding: "12px 15px",
+    borderRadius: "10px",
+    border: "1px solid #ddd",
+    backgroundColor: "#fff",
+    fontSize: "16px",
+    color: "#333",
+    boxShadow: "inset 0 1px 3px rgba(0, 0, 0, 0.1)",
+    outline: "none",
+    transition: "border-color 0.2s, box-shadow 0.2s",
+  }}
+
+
+  
+  onFocus={(e) =>
+    (e.target.style.borderColor = "#007aff") &&
+    (e.target.style.boxShadow = "0 0 5px rgba(0, 122, 255, 0.5)")
+  }
+  onBlur={(e) =>
+    (e.target.style.borderColor = "#ddd") &&
+    (e.target.style.boxShadow = "inset 0 1px 3px rgba(0, 0, 0, 0.1)")
+  }
+
+  value={V}
+  onChange={(e) => setV(Number(e.target.value))}
+  placeholder="Enter Volume"
+
+
+/>
+
+
     <Line data={qweChartData} options={optionsSecondChart} />
   </div>
   
