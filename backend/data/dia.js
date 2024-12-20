@@ -998,14 +998,501 @@ const resetZoom = () => {
 
     <Line data={qweChartData} options={optionsSecondChart} />
   </div>
+  import React, { useMemo, useState, useRef } from "react";
+import { Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  LogarithmicScale ,
+  registerables,
+} from "chart.js";
+import zoomPlugin from 'chartjs-plugin-zoom';
+import "./App.css";
+ChartJS.register(...registerables, zoomPlugin);
+
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  LogarithmicScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+
+
+
+function App() {
+  const [a, setA] = useState(""); // Target pressure
+  const [b, setB] = useState(""); // Target flowrate
+  const [d, setD] = useState(""); // Pump model
+  const [result, setResult] = useState([{x: 0.1, y:10},{x:0.2, y:20}]); // 결과 데이터
+  const [type, setType] = useState(""); // 종류
+  const [length, setLength] = useState(""); // 길이
+  const [diameter, setDiameter] = useState(""); // 직경
+  const [conductanceList, setConductanceList] = useState([]); // Conductance 리스트
+  const [xLogScale, setXLogScale] = useState(false); // x축 로그 스케일 상태
+  const [yLogScale, setYLogScale] = useState(false); // y축 로그 스케일 상태
+  const chartRef = useRef(null);
+  
+  const [V, setV] = useState(100); // 부피 V 초기값
+
+
+  const point = { x: a, y: b }; // 기준점
+  const marginPercent = 0.2; // 마진 비율 (20%)
+
+  const marginX = point.x * marginPercent; // x축 마진
+  const marginY = point.y * marginPercent; // y축 마진
+  console.log(marginX,marginY)
+  
+// 추천 Conductance 추가 핸들러
+const handleAddRecommendedConductance = (recommendations) => {
+  // 기존 리스트에 추천 Conductance 항목 추가
+  setConductanceList([...conductanceList, ...recommendations]);
+};
+// Conductance 초기화 핸들러
+const handleResetConductance = () => {
+  setConductanceList([]); // conductanceList를 빈 배열로 설정
+};
+
+ 
+  
+  // 전체 데이터
+  const data = {
+    labels: result.map((point) => point.x ), // result의 x 값을 labels로 사용
+    datasets: [
+      {
+        label: "Throughtput (Slm)", // 데이터 세트의 라벨
+        data: result.map((point) => point.y), // result의 y 값을 data로 사용
+        borderColor: "rgba(9, 11, 254, 10)", // 연한 회색
+        backgroundColor: "rgba(9, 11, 254, 10)",
+        borderWidth: 2, // 줌 상태에 따라 선 굵기 변경
+        pointRadius: 1, // 줌 상태에 따라 점 크기 변경
+        pointBackgroundColor: "rgba(9, 11, 254, 10)", // 점 채우기 색상
+        pointBorderColor: "rgba(9, 11, 254, 10)", // 점 테두리 색상
+        pointHoverRadius: 6, // 마우스 올릴 때 점 크기
+
+
+      },
+      
+
+      
   
 
+      {
+        label: 'Target',
+        data: [{x:a,y:b}], // 추가할 점의 좌표
+        backgroundColor: 'red', // 점의 색상
+        borderColor: 'red',
+        pointRadius: 3, // 점의 크기
+        pointHoverRadius: 8,
+        showLine: false, // 선을 그리지 않음
+      },
 
-</div>
+
+    ],
+  };
 
 
 
-  );
-}
 
-export default App;
+
+const targetY = b;
+const targetX = a; 
+  
+const findXForY = (data, targetY) => {
+  const xLabels = data.labels; // x축 값
+  const yData = data.datasets[0].data; // y축 값
+
+  for (let i = 0; i < yData.length - 1; i++) {
+    const y1 = yData[i]; // y축 값
+    const y2 = yData[i + 1]; // 다음 y축 값
+    const x1 = xLabels[i]; // x축 값
+    const x2 = xLabels[i + 1]; // 다음 x축 값
+
+    // targetY가 y1과 y2 사이에 있는지 확인
+    if ((y1 <= targetY && targetY <= y2 && y1 != 0 && y2 != 0) || (y2 <= targetY && targetY <= y1 && y1 != 0 && y2 != 0)) {
+      // 선형 보간법 공식 적용
+      const x = x1 + ((targetY - y1) * (x2 - x1)) / (y2 - y1);
+      
+      console.log("x1,x2,y1,y2,targety,x",x1,x2,y2,y1,x,targetY);
+      
+      
+      return x; // 근사 x값 반환
+
+
+    }
+  }
+
+  return null; // targetY가 범위 내에 없으면 null 반환
+
+
+
+
+};
+
+const findYForX = (data, targetX) => {
+  const xLabels = data.labels; // x축 값
+  const yData = data.datasets[0].data; // y축 값
+
+  for (let i = 0; i < xLabels.length - 1; i++) {
+    const x1 = xLabels[i];
+    const x2 = xLabels[i + 1];
+    const y1 = yData[i];
+    const y2 = yData[i + 1];
+
+    // targetX가 x1과 x2 사이에 있는지 확인
+    if ((x1 <= targetX && targetX <= x2) || (x2 <= targetX && targetX <= x1)) {
+      // 선형 보간법 공식 적용
+      const y = y1 + ((targetX - x1) * (y2 - y1)) / (x2 - x1);
+      return y; // 근사 y값 반환
+    }
+  }
+
+  return null; // targetX가 범위 내에 없으면 null 반환
+};
+
+
+let cumulativeSum = 0;
+
+const qwerData = useMemo(() => {
+  let cumulativeSum = 0;
+
+  return result.map((point, index, arr) => {
+    let e = null;
+  // e 계산 (마지막 요소 제외)
+  if (index < arr.length - 1) {
+    const nextX = arr[index + 1].x;
+
+    // 로그 값이 유효한 경우에만 계산
+    if (point.y>0 && point.x > 0 && nextX > 0 && point.x / nextX > 0) {
+      e = V / (point.y / 60 * 760 /point.x) * Math.log(point.x / nextX);
+
+    } else {
+      e = 0; // 로그 값이 유효하지 않으면 e를 0으로 처리
+    }
+  }
+
+  // 누적합 r 계산
+  cumulativeSum += e;
+
+  return {
+    q: point.x,       // x 값
+    w: point.y,       // y 값
+    e: e,             // 계산된 e 값
+    r: cumulativeSum, // 누적합 r 값
+  };
+});  }, [V, result]); // V 값 변경 시 재계
+
+console.log(qwerData);
+
+
+  const qweChartData = {
+
+    
+  
+    labels: qwerData.map((item) => item.r), // r를 x축 값으로 사용
+    datasets: [
+      {
+        label: "Tact time graph", // 새로운 데이터셋
+        data: qwerData.map((item) => ({
+          x: item.r,
+          y: item.q,
+        })),
+        borderColor: "rgba(9, 11, 254, 10)", // 연한 회색
+        backgroundColor: "rgba(9, 11, 254, 10)",
+        borderWidth: 2, // 줌 상태에 따라 선 굵기 변경
+        pointRadius: 1, // 줌 상태에 따라 점 크기 변경
+        pointBackgroundColor: "rgba(9, 11, 254, 10)", // 점 채우기 색상
+        pointBorderColor: "rgba(9, 11, 254, 10)", // 점 테두리 색상
+        pointHoverRadius: 6, // 마우스 올릴 때 점 크
+
+      },
+    ],
+  };
+
+
+
+
+
+
+  
+  // 예제 데이터
+   
+  const resultX = findXForY(data, targetY);
+  console.log("targety" , targetY,resultX)
+  console.log(`y=${targetY}에 해당하는 x 값은 ${resultX}입니다.`);
+  const roundedx = Math.round(resultX * 100) / 100; // 둘째 자리 반올림
+  const ansxx= (targetX-roundedx)/(roundedx)*100; 
+  const ansx= Math.round(ansxx * 100) / 100;
+  console.log("pressure margin 확인 :  ", ansx,targetX,roundedx )
+
+
+  const resultY = findYForX(data, targetX);
+  console.log(`x=${targetX}에 해당하는 y 값은 ${resultY}입니다.`);
+  const roundedy = Math.round(resultY * 100) / 100; // 둘째 자리 반올림
+  const ansyy= (roundedy-targetY)/(roundedy)*100;
+  const ansy= Math.round(ansyy * 100) / 100;
+
+
+
+
+  const options = {
+       plugins: {
+
+
+      zoom: {
+        pan: {
+          enabled: true, // 드래그로 이동
+          mode: 'x', // x축으로만 이동
+        },
+        zoom: {
+          wheel: {
+            enabled: true, // 마우스 휠 줌 활성화
+          },
+          pinch: {
+            enabled: true, // 터치 핀치 줌 활성화
+          },
+          mode: 'x', // x축 줌만 활성화
+        },
+       
+      },
+
+      
+
+
+
+    },
+
+
+    scales: {
+      x: {
+        type: xLogScale ? "logarithmic" : "linear",
+        title: {
+          display: true,
+          text: "Presure (Torr)",
+        },
+        
+      },
+      y: {
+        type: yLogScale ? "logarithmic" : "linear",
+        title: {
+          display: true,
+          text: "Throughput (SLM)",
+        },
+      },
+    },
+    
+    responsive: true,
+    maintainAspectRatio: false,
+  };
+
+  
+  const optionsSecondChart = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        type: "linear",
+        title: {
+          display: true,
+          text: "Time (Second)", // 두 번째 그래프의 x축 레이블
+        },
+      },
+      y: {
+        type: "linear",
+        title: {
+          display: true,
+          text: "Pressure (Torr)", // 두 번째 그래프의 y축 레이블
+        },
+      },
+    },
+  };
+
+  
+ 
+  //const margin = {(a-conditionx)/100}    
+
+
+
+  // Conductance 추가 핸들러
+  const handleAddConductance = () => {
+    if (!type || !length || !diameter) {
+      alert("종류, 길이, 직경을 모두 입력하세요.");
+      return;
+    }
+
+
+
+    const newConductance = {
+      type,
+      description: `L=${length}cm, D=${diameter}cm`,
+    };
+
+    setConductanceList([...conductanceList, newConductance]);
+    setType(""); // 입력 필드 초기화
+    setLength("");
+    setDiameter("");
+  };
+
+  const payload = {
+    a: parseFloat(a), // 숫자
+    b: parseFloat(b), // 숫자
+    pump: d,
+    conductance: conductanceList,          // 문자열
+      };
+
+  // 줌 리셋 기능
+ 
+
+
+  // 데이터 전송 핸들러
+  const handleCalculate = async () => {
+    try {
+      const response = await fetch("http://12.54.70.125:8000/calculate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          a: parseFloat(a),
+          b: parseFloat(b),
+          pump: d,
+          conductance: conductanceList,
+        }),
+      });
+      
+
+      // log 확인 
+   
+
+      
+
+
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("받은 데이터:", result); // 응답 로그 확인
+        setResult(result); // 결과 저장
+        // test
+        console.log("Received Result:",result)
+        console.log(Array.isArray(result)); // true라면 배열
+        console.log("데이터 길이:", result.length); // 데이터 길이 확인
+        console.log("type",type.result)
+        
+
+
+       
+
+
+
+
+      } else {
+        console.error("서버 오류:", response.statusText);
+      }
+    } catch (error) {
+      console.error("네트워크 오류:", error);
+    }
+  };
+
+      // 버튼 클릭 핸들러
+const toggleXLogScale = () => setXLogScale((prev) => !prev);
+const toggleYLogScale = () => setYLogScale((prev) => !prev);
+
+const resetZoom = () => {
+  if (chartRef.current) {
+    chartRef.current.resetZoom();
+  }
+};
+
+
+  return (
+    <div
+      style={{
+        fontFamily: "Arial, sans-serif",
+        maxWidth: "950px",
+        margin: "0 auto",
+        padding: "100px",
+        backgroundColor: "#ffffff",
+        borderRadius: "15px",
+        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+        //overflow: "hidden", // 음영 바깥으로 삐져나오는 그래프 방지
+      }}
+    >
+      <h1
+        style={{
+          textAlign: "center",
+          color: "#333",
+          fontSize: "24px",
+          fontWeight: "bold",
+        }}
+      >
+        Mg Pumping Simulation 
+      </h1>
+      <h3
+        style={{
+          textAlign: "Right",
+          color: "#333",
+          fontSize: "15px",
+          fontWeight: "bold",
+        }}
+      >
+        제작 :고명국님
+         </h3>
+      <h3
+        style={{
+          textAlign: "Right",
+          marginRight : "1px",
+          color: "#333",
+          fontSize: "10px",
+          
+        }}
+      >
+        Contributor 조재영님
+      </h3>
+
+
+      {/* Conductance 입력 */}
+      <div
+        style={{
+          backgroundColor: "#fff",
+          padding: "15px",
+          borderRadius: "10px",
+          marginBottom: "20px",
+        }}
+      >
+        <h3 style={{ color: "#666", marginBottom: "10px" }}>Conductance 입력</h3>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          style={{
+            padding: "10px",
+            marginBottom: "10px",
+            width: "30%",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+          }}
+        >
+          <option value="">종류 선택</option>
+          <option value="Circular Type">Circular Type</option>
+        </select>
+        <input
+          type="number"
+          value={length}
+          onChange={(e) => setLength(e.target.value)}
+          placeholder="길이 (cm)"
+          style={{
+            display :  "block",
+            padding: "10px",
+            marginBottom: "10px",
+            width: "50%",
+           
